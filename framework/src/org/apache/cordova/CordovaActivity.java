@@ -43,6 +43,7 @@ import android.graphics.Point;
 import android.hardware.SensorManager;
 import android.media.AudioManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
@@ -213,6 +214,7 @@ public class CordovaActivity extends Activity implements CordovaInterface {
      *
      * @param savedInstanceState
      */
+    @SuppressLint("NewApi")
     @SuppressWarnings("deprecation")
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -241,6 +243,7 @@ public class CordovaActivity extends Activity implements CordovaInterface {
             getWindow().setFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN,
                     WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
         }
+
         // This builds the view.  We could probably get away with NOT having a LinearLayout, but I like having a bucket!
         Display display = getWindowManager().getDefaultDisplay();
         int width = display.getWidth();
@@ -342,8 +345,10 @@ public class CordovaActivity extends Activity implements CordovaInterface {
             }
         }
 
-        // Add web view but make it invisible while loading URL
-        this.appView.setVisibility(View.INVISIBLE);
+        // Add web view, and hide it when 'LoadingDialog' is enabled.
+        String loading = this.getStringProperty("LoadingDialog", null);
+        if (loading != null) this.appView.setVisibility(View.INVISIBLE);
+
         this.root.addView(this.appView);
         setContentView(this.root);
 
@@ -728,7 +733,25 @@ public class CordovaActivity extends Activity implements CordovaInterface {
         //Code to test CB-3064
         String errorUrl = this.getStringProperty("ErrorUrl", null);
         LOG.d(TAG, "CB-3064: The errorUrl is " + errorUrl);
-          
+
+        if(this.getBooleanProperty("FullScreen", false))
+        {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                final int uiOptions =
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    | View.SYSTEM_UI_FLAG_FULLSCREEN
+                    | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
+
+                getWindow().getDecorView().setSystemUiVisibility(uiOptions);
+            } else {
+                getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN);
+            }
+        }
+
         if (this.activityState == ACTIVITY_STARTING) {
             this.activityState = ACTIVITY_RUNNING;
             return;
@@ -1067,6 +1090,7 @@ public class CordovaActivity extends Activity implements CordovaInterface {
         }
     }
 
+    @SuppressLint("NewApi")
     protected int getScreenOrientation() {
         // getResources().getConfiguration().orientation returns wrong value in some devices.
         // Below is another way to calculate screen orientation.
@@ -1106,6 +1130,9 @@ public class CordovaActivity extends Activity implements CordovaInterface {
         final CordovaActivity that = this;
 
         Runnable runnable = new Runnable() {
+            @SuppressLint({
+                    "InlinedApi", "NewApi"
+            })
             public void run() {
                 // Create the layout for the dialog
                 splashLayout = getSplashLayout();
@@ -1117,6 +1144,24 @@ public class CordovaActivity extends Activity implements CordovaInterface {
                     splashDialog.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                             WindowManager.LayoutParams.FLAG_FULLSCREEN);
                 }
+                if(getBooleanProperty("FullScreen", false))
+                {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                        final int uiOptions =
+                            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_FULLSCREEN
+                            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
+
+                        splashDialog.getWindow().getDecorView().setSystemUiVisibility(uiOptions);
+                    } else {
+                        splashDialog.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                            WindowManager.LayoutParams.FLAG_FULLSCREEN);
+                    }
+                }
+
                 splashDialog.setContentView(splashLayout);
                 splashDialog.setCancelable(false);
                 splashDialog.show();
